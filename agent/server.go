@@ -1,13 +1,11 @@
 package agent
 
 import (
-	"fmt"
 	"github.com/google/wire"
 	"github.com/kuno989/friday_agent/agent/pkg"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/spf13/viper"
-	"net/http"
 )
 
 var (
@@ -21,6 +19,8 @@ type ServerConfig struct {
 	Debug          bool     `mapstructure:"debug"`
 	URI            string   `mapstructure:"uri"`
 	AgentPort      string   `mapstructure:"agent_port"`
+	BrokerURI      string   `mapstructure:"broker_uri"`
+	BrokerPort     string   `mapstructure:"broker_port"`
 	AllowedOrigins []string `mapstructure:"allowed_origins"`
 	MaxFileSize    int64    `mapstructure:"maxFileSize"`
 }
@@ -65,12 +65,8 @@ func NewServer(cfg ServerConfig, minio *pkg.Minio) *Server {
 }
 func (s *Server) RegisterHandlers() {
 	api := s.Group("/api")
-	api.GET("/test", func(context echo.Context) error {
-		fmt.Println("hihi")
-		return context.JSON(http.StatusOK,"hi")
-	})
-	api.GET("/test2/", func(context echo.Context) error {
-		fmt.Println("hihi")
-		return context.JSON(http.StatusOK,"hi")
-	})
+	api.GET("/", s.index)
+	api.GET("/system", s.system)
+	api.POST("/download", s.malwareDownload)
+	api.POST("/start", s.startAnalysis)
 }

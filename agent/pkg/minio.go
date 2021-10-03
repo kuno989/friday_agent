@@ -16,8 +16,6 @@ import (
 var (
 	DefaultMinioConfig = MinioConfig{
 		URI:       "localhost:9000",
-		AccessKey: "",
-		SecretKey: "",
 		Bucket:    "malwares",
 	}
 	MinioProviderSet = wire.NewSet(NewMinio, ProvideMinioConfig)
