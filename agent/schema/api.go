@@ -14,7 +14,10 @@ type ResponseObject struct {
 }
 
 type StatusChanger struct {
-	Status int `json:"status,omitempty"`
+	MinioObjectKey string `json:"minio_object_key,omitempty"`
+	Sha256         string `json:"sha256,omitempty"`
+	FileType       string `json:"file_type"`
+	Status 		   int `json:"status,omitempty"`
 }
 
 type RequestJob struct {
@@ -35,4 +38,8 @@ type Response struct {
 
 type Result struct {
 	Status string `json:"status,omitempty"`
+}
+type ResponsePid struct {
+	MalwareName string `json:"malware_name"`
+	Pid          int32 `json:"pid"`
 }

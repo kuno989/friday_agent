@@ -23,6 +23,7 @@ type ServerConfig struct {
 	BrokerPort     string   `mapstructure:"broker_port"`
 	AllowedOrigins []string `mapstructure:"allowed_origins"`
 	MaxFileSize    int64    `mapstructure:"maxFileSize"`
+	Volume         string   `mapstructure:"volume"`
 }
 
 func ProvideServerConfig(cfg *viper.Viper) (ServerConfig, error) {

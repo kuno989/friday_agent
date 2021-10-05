@@ -6,6 +6,7 @@ import (
 	"fmt"
 	windows "github.com/elastic/go-windows"
 	"github.com/kuno989/friday_agent/agent/schema"
+	models "github.com/kuno989/friday_agent/agent/schema/model"
 	"github.com/labstack/echo/v4"
 	"github.com/sirupsen/logrus"
 	"net/http"
@@ -50,16 +51,14 @@ func (s *Server) system(c echo.Context) error {
 
 func (s *Server) malwareDownload(c echo.Context) error {
 	var resp schema.ResponseObject
-	logrus.Info("파일 다운로드 중..")
+	logrus.Info("파일 다운로드 중")
 	if err := c.Bind(&resp); err != nil {
 		return err
 	}
-
 	var fileType string
 	if resp.FileType == "pe" {
 		fileType = ".exe"
 	}
-
 	filePath := filepath.Join("./", resp.Sha256 + fileType)
 	file, err := os.Create(filePath)
 	if err != nil {
@@ -74,17 +73,18 @@ func (s *Server) malwareDownload(c echo.Context) error {
 		})
 	}
 	file.Close()
-	logrus.Info("파일 다운로드 완료..")
-
+	logrus.Info("파일 다운로드 완료")
 	var StatusChanger = schema.StatusChanger{
+		Sha256: resp.Sha256,
+		MinioObjectKey: resp.MinioObjectKey,
+		FileType: resp.FileType,
 		Status: vmProcessing,
 	}
 	var buff []byte
 	if buff, err = json.Marshal(StatusChanger); err != nil {
 		logrus.Errorf("Failed to json marshall object: %v ", err)
 	}
-	s.jobStartHandler(resp.Sha256, buff)
-
+	s.jobStartHandler(resp, buff)
 	return c.JSON(http.StatusOK, schema.Response{
 		Message: "Success",
 		Description: "Mal downloaded",
@@ -96,9 +96,48 @@ func (s *Server) startAnalysis(c echo.Context) error {
 	if err := c.Bind(&resp); err != nil {
 		return err
 	}
-	fmt.Printf("%s job start", resp.Sha256)
-	return c.JSON(http.StatusOK, schema.Response{
-		Message: "Success",
-		Description: "Malware analysis started",
+	var file string
+	s.checkProcmon()
+
+	if resp.FileType == "pe" {
+		file = fmt.Sprintf("%s.exe",resp.Sha256)
+	}
+	logrus.Infof("%s 분석 시작", file)
+	path := fmt.Sprintf("%s\\%s",s.Config.Volume,file)
+	malwareName, pid := s.startMalware(file,path)
+	logrus.Infof("%s 악성코드 실행 완료", file)
+	s.processCapture()
+
+	processCaptureTimer := time.NewTimer(time.Second * 15)
+	go func() {
+		<-processCaptureTimer.C
+		s.terminateProcmon()
+	}()
+
+	pmltoCSVTimer := time.NewTimer(time.Second * 40)
+	go func() {
+		<-pmltoCSVTimer.C
+		logrus.Info("")
+		s.pmltoCSV()
+	}()
+
+	jsonConvertTimer := time.NewTimer(time.Second * 60)
+	var data models.DBModel
+	go func() {
+		<-jsonConvertTimer.C
+		logrus.Info("")
+		s.ConvertCsvToJson(&data)
+	}()
+
+	jobEndTimer := time.NewTimer(time.Second * 70)
+	go func() {
+		<-jobEndTimer.C
+		logrus.Info("분석 종료 요청 중")
+		s.jobEndHandler(resp, &data)
+	}()
+
+	return c.JSON(http.StatusOK, schema.ResponsePid{
+		MalwareName: malwareName,
+		Pid: pid,
 	})
 }
