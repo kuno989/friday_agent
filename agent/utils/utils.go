@@ -4,6 +4,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"os"
 	"os/exec"
+	"strings"
 )
 
 func CMD(run bool, name string, arg ...string) {
@@ -25,20 +26,20 @@ func CMD(run bool, name string, arg ...string) {
 
 func CheckApproveLists(list string) bool {
 	approveLists := []string{
+		"Procmon.exe",
 		"C:\\\\Program Files\\\\Windows Media Player\\\\wmpnetwk.exe",
 		"C:\\\\Program Files\\\\Windows Media Player\\\\wmpnscfg.exe",
 		"C:\\\\Windows\\\\Explorer.EXE",
 		"C:\\\\Windows\\\\system32\\\\lsm.exe",
-		"C:\\\\Users\\\\Administrator\\\\Desktop\\\\sandbox.exe",
 		"C:\\\\procmon.exe",
 		"C:\\\\Windows\\\\system32\\\\vssvc.exe",
 		"C:\\\\Windows\\\\system32\\\\mobsync.exe",
 		"C:\\\\Windows\\\\system32\\\\DllHost.exe",
+		"C:\\\\Users\\\\kuno\\\\Desktop\\\\friday_agent.exe",
 	}
 	for _, ls := range approveLists {
-		if ls == list {
-			return true
-		}
+		replacePath := strings.Replace(list, "\\", "\\\\", -1)
+		return strings.Contains(replacePath, ls)
 	}
 	return false
 }

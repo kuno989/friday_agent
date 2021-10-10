@@ -3,6 +3,7 @@ module github.com/kuno989/friday_agent
 go 1.17
 
 require (
+	github.com/BurntSushi/xgb v0.0.0-20160522181843-27f122750802 // indirect
 	github.com/StackExchange/wmi v1.2.1 // indirect
 	github.com/dustin/go-humanize v1.0.0 // indirect
 	github.com/elastic/go-windows v1.0.1 // indirect
@@ -52,6 +53,7 @@ require (
 	github.com/vcaesar/gops v0.21.1 // indirect
 	github.com/vcaesar/imgo v0.20.0 // indirect
 	github.com/vcaesar/tt v0.11.0 // indirect
+	github.com/vova616/screenshot v0.0.0-20191005130345-da36db2560ab // indirect
 	golang.org/x/crypto v0.0.0-20210817164053-32db794688a5 // indirect
 	golang.org/x/image v0.0.0-20210628002857-a66eb6448b8d // indirect
 	golang.org/x/net v0.0.0-20210913180222-943fd674d43e // indirect

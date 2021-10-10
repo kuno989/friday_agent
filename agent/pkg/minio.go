@@ -1,16 +1,16 @@
 package pkg
 
 import (
-	"bytes"
 	"context"
+	"fmt"
 	"github.com/google/wire"
 	miniogo "github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/spf13/viper"
 	"io"
 	"io/ioutil"
-	"mime/multipart"
 	"net/http"
+	"os"
 )
 
 var (
@@ -52,16 +52,19 @@ func NewMinio(cfg MinioConfig) (*Minio, error) {
 	}, nil
 }
 
-func (m Minio) Upload(ctx context.Context, fileInfo *multipart.FileHeader) (miniogo.UploadInfo, error) {
-	file, err := fileInfo.Open()
+func (m Minio) Upload(ctx context.Context, path string) (miniogo.UploadInfo, error) {
+	file, _ := os.Open(path)
+	fileInfo, _ := file.Stat()
+	buf, err := ioutil.ReadFile(path)
 	if err != nil {
 		return miniogo.UploadInfo{}, err
 	}
-	defer file.Close()
-	content, err := ioutil.ReadAll(file)
-	contentType := http.DetectContentType(content)
-	buf := bytes.NewBuffer(content)
-	info, err := m.Client.PutObject(ctx, m.Config.Bucket, "sample/"+fileInfo.Filename, buf, fileInfo.Size, miniogo.PutObjectOptions{
+	contentType := http.DetectContentType(buf)
+	if err != nil {
+		return miniogo.UploadInfo{}, err
+	}
+	objectPath := fmt.Sprintf("screenshots/%s",fileInfo.Name())
+	info, err := m.Client.PutObject(ctx, m.Config.Bucket, objectPath, file, fileInfo.Size(), miniogo.PutObjectOptions{
 		ContentType: contentType,
 	})
 	if err != nil {

@@ -11,7 +11,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"net/http"
 	"os"
-	"path/filepath"
 	"time"
 )
 
@@ -59,7 +58,7 @@ func (s *Server) malwareDownload(c echo.Context) error {
 	if resp.FileType == "pe" {
 		fileType = ".exe"
 	}
-	filePath := filepath.Join("./", resp.Sha256 + fileType)
+	filePath := fmt.Sprintf("%s\\%s%s",s.Config.Volume,resp.Sha256,fileType)
 	file, err := os.Create(filePath)
 	if err != nil {
 		logrus.Errorf("failed creating file %s", err)
@@ -103,41 +102,72 @@ func (s *Server) startAnalysis(c echo.Context) error {
 		file = fmt.Sprintf("%s.exe",resp.Sha256)
 	}
 	logrus.Infof("%s 분석 시작", file)
-	path := fmt.Sprintf("%s\\%s",s.Config.Volume,file)
-	malwareName, pid := s.startMalware(file,path)
-	logrus.Infof("%s 악성코드 실행 완료", file)
 	s.processCapture()
+	time.Sleep(time.Second * 5)
 
-	processCaptureTimer := time.NewTimer(time.Second * 15)
+	var imageCapture []string
+	var objectKeys []string
+
+	path := fmt.Sprintf("%s\\%s",s.Config.Volume,file)
+
+	processCaptureinit := time.NewTimer(time.Second * 10)
+	go func() {
+		<-processCaptureinit.C
+		imagePath := s.captureImage(resp.Sha256, 1)
+		imageCapture = append(imageCapture, imagePath)
+	}()
+
+	s.startMalware(path)
+	logrus.Infof("%s 악성코드 실행 완료", file)
+
+	processCaptureTimer := time.NewTimer(time.Second * 20)
 	go func() {
 		<-processCaptureTimer.C
+		imagePath := s.captureImage(resp.Sha256, 2)
+		imageCapture = append(imageCapture, imagePath)
 		s.terminateProcmon()
 	}()
 
-	pmltoCSVTimer := time.NewTimer(time.Second * 40)
+	pmltoCSVTimer := time.NewTimer(time.Second * 45)
 	go func() {
 		<-pmltoCSVTimer.C
-		logrus.Info("")
+		imagePath := s.captureImage(resp.Sha256, 3)
+		imageCapture = append(imageCapture, imagePath)
 		s.pmltoCSV()
 	}()
 
-	jsonConvertTimer := time.NewTimer(time.Second * 60)
+	jsonConvertTimer := time.NewTimer(time.Second * 65)
 	var data models.DBModel
+	data.MalName = file
 	go func() {
 		<-jsonConvertTimer.C
-		logrus.Info("")
+		imagePath := s.captureImage(resp.Sha256, 4)
+		imageCapture = append(imageCapture, imagePath)
 		s.ConvertCsvToJson(&data)
 	}()
 
-	jobEndTimer := time.NewTimer(time.Second * 70)
+	jobEndTimer := time.NewTimer(time.Second * 75)
 	go func() {
 		<-jobEndTimer.C
+		imagePath := s.captureImage(resp.Sha256, 5)
+		imageCapture = append(imageCapture, imagePath)
 		logrus.Info("분석 종료 요청 중")
+		data.ScreenShots = imageCapture
+		ctx := context.Background()
+		for _, screenshot := range imageCapture {
+			uploadinfo, err := s.minio.Upload(ctx, screenshot)
+			if err != nil {
+				logrus.Errorf("minio error: %v", err)
+			}
+			objectKeys = append(objectKeys, uploadinfo.Key)
+		}
+		logrus.Info("스크린샷 업로드 완료")
+		data.ScreenShots = objectKeys
 		s.jobEndHandler(resp, &data)
 	}()
 
-	return c.JSON(http.StatusOK, schema.ResponsePid{
-		MalwareName: malwareName,
-		Pid: pid,
+	return c.JSON(http.StatusOK, schema.Response{
+		Message: "Success",
+		Description: "작업 요청 완료",
 	})
 }

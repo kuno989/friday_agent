@@ -5,11 +5,13 @@ import (
 	"bytes"
 	"encoding/csv"
 	"encoding/json"
+	"fmt"
 	"github.com/kuno989/friday_agent/agent/schema"
 	models "github.com/kuno989/friday_agent/agent/schema/model"
 	"github.com/kuno989/friday_agent/agent/utils"
 	"github.com/sirupsen/logrus"
-	ps "github.com/vcaesar/gops"
+	"github.com/vova616/screenshot"
+	"image/jpeg"
 	"log"
 	"net/http"
 	"os"
@@ -19,11 +21,12 @@ import (
 )
 
 const (
+	imageSave = "C:\\Users\\kuno\\Downloads"
 	procmon = "C:\\procmon.exe"
 	pmc = "C:\\ProcmonConfiguration.pmc"
-	pml = "C:\\Users\\kuno\\Desktop\\kuno_sandbox.pml"
-	csvData = "C:\\Users\\kuno\\Desktop\\kuno_sandbox.csv"
-	jsonData = "C:\\Users\\kuno\\Desktop\\kuno_sandbox.json"
+	pml = "C:\\Users\\kuno\\Downloads\\kuno_sandbox.pml"
+	csvData = "C:\\Users\\kuno\\Downloads\\kuno_sandbox.csv"
+	jsonData = "C:\\Users\\kuno\\Downloads\\kuno_sandbox.json"
 )
 
 func (s *Server) jobStartHandler(data schema.ResponseObject, buff []byte) {
@@ -92,6 +95,25 @@ func (s *Server) pmltoCSV() {
 	}
 }
 
+func (s *Server) captureImage(sha256 string, num int) string {
+	img, err := screenshot.CaptureScreen()
+	defer logrus.Info("이미지 캡쳐 완료")
+	if err != nil {
+		logrus.Errorf("이미지 캡쳐 오류")
+	}
+	filePath := fmt.Sprintf("%s\\%s-%d.jpeg",imageSave,sha256,num)
+	f, err := os.Create(filePath)
+	defer f.Close()
+	if err != nil {
+		logrus.Errorf("이미지 저장 오류")
+	}
+	err = jpeg.Encode(f, img, &jpeg.Options{95})
+	if err != nil {
+		logrus.Errorf("인코딩 변환 오류")
+	}
+	return filePath
+}
+
 func (s *Server) terminateProcmon() {
 	defer logrus.Info("분석 종료")
 	v := []string{"cmd.exe", "/C", "start", procmon, "/Terminate"}
@@ -102,23 +124,12 @@ func (s *Server) terminateProcmon() {
 }
 
 
-func (s *Server) startMalware(filename, path string) (string,int32) {
+func (s *Server) startMalware(path string) {
 	v := []string{"cmd.exe", "/C", "start", path}
 	cmd := exec.Command(v[0], v[:]...)
 	if err := cmd.Run(); err != nil {
 		logrus.Errorf("%s 을 찾을 수 없습니다.", path)
 	}
-
-	lst, _ := ps.Process()
-	var pid int32
-	var malwareName string
-	for _, p := range lst {
-		if p.Name == filename {
-			pid = p.Pid
-			malwareName = p.Name
-		}
-	}
-	return malwareName, pid
 }
 
 func (s *Server) ConvertCsvToJson(data *models.DBModel) {
@@ -151,8 +162,8 @@ func (s *Server) ConvertCsvToJson(data *models.DBModel) {
 	}
 	for i, rec := range records {
 		if i > 0 {
-			replaceImagePath := strings.Replace(rec[8], "\\", "\\\\", -1)
-			notApprove := utils.CheckApproveLists(replaceImagePath)
+			//replaceImagePath := strings.Replace(rec[8], "\\", "\\\\", -1)
+			notApprove := utils.CheckApproveLists(rec[8])
 			if !notApprove {
 				switch rec[3] {
 				case "Process Create":

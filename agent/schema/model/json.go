@@ -1,6 +1,8 @@
 package models
 
 type DBModel struct {
+	MalName        string           `json:"malware_name"`
+	ScreenShots    []string 		`json:"screen_shots"`
 	ProcessCreate  []ProcessCreate  `json:"process_create"`
 	CreateFile     []CreateFile     `json:"create_file"`
 	RegCreateKey   []RegCreateKey   `json:"create_reg_key"`
