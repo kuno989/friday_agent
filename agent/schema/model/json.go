@@ -5,6 +5,7 @@ type DBModel struct {
 	ScreenShots    []string 		`json:"screen_shots"`
 	ProcessCreate  []ProcessCreate  `json:"process_create"`
 	CreateFile     []CreateFile     `json:"create_file"`
+	ReadFile       []ReadFile       `json:"read_file"`
 	RegCreateKey   []RegCreateKey   `json:"create_reg_key"`
 	OpenRegKey     []OpenRegKey     `json:"open_reg_key"`
 	GetRegKey      []GetRegKey      `json:"get_reg_key"`
@@ -29,6 +30,11 @@ type CreateFile struct {
 	ProcessName string `json:"process_name"`
 	ProcessPath string `json:"process_path"`
 	CreatePath  string `json:"create_path"`
+}
+type ReadFile struct {
+	PID         string `json:"pid"`
+	ProcessName string `json:"process_name"`
+	ProcessPath string `json:"process_path"`
 }
 type RenameFile struct {
 	PID         string `json:"pid"`

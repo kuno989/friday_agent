@@ -107,12 +107,11 @@ func (s *Server) startAnalysis(c echo.Context) error {
 
 	var imageCapture []string
 	var objectKeys []string
-
 	path := fmt.Sprintf("%s\\%s",s.Config.Volume,file)
 
-	processCaptureinit := time.NewTimer(time.Second * 10)
+	imageCapture1 := time.NewTimer(time.Second * 10)
 	go func() {
-		<-processCaptureinit.C
+		<-imageCapture1.C
 		imagePath := s.captureImage(resp.Sha256, 1)
 		imageCapture = append(imageCapture, imagePath)
 	}()
@@ -120,27 +119,28 @@ func (s *Server) startAnalysis(c echo.Context) error {
 	s.startMalware(path)
 	logrus.Infof("%s 악성코드 실행 완료", file)
 
-	processCaptureTimer := time.NewTimer(time.Second * 20)
+	var data models.DBModel
+
+	imageCapture2 := time.NewTimer(time.Second * 20)
 	go func() {
-		<-processCaptureTimer.C
+		<-imageCapture2.C
 		imagePath := s.captureImage(resp.Sha256, 2)
 		imageCapture = append(imageCapture, imagePath)
 		s.terminateProcmon()
 	}()
 
-	pmltoCSVTimer := time.NewTimer(time.Second * 45)
+	imageCapture3 := time.NewTimer(time.Second * 45)
 	go func() {
-		<-pmltoCSVTimer.C
+		<-imageCapture3.C
 		imagePath := s.captureImage(resp.Sha256, 3)
 		imageCapture = append(imageCapture, imagePath)
 		s.pmltoCSV()
 	}()
 
-	jsonConvertTimer := time.NewTimer(time.Second * 65)
-	var data models.DBModel
-	data.MalName = file
+	imageCapture4 := time.NewTimer(time.Second * 65)
+
 	go func() {
-		<-jsonConvertTimer.C
+		<-imageCapture4.C
 		imagePath := s.captureImage(resp.Sha256, 4)
 		imageCapture = append(imageCapture, imagePath)
 		s.ConvertCsvToJson(&data)
@@ -152,7 +152,6 @@ func (s *Server) startAnalysis(c echo.Context) error {
 		imagePath := s.captureImage(resp.Sha256, 5)
 		imageCapture = append(imageCapture, imagePath)
 		logrus.Info("분석 종료 요청 중")
-		data.ScreenShots = imageCapture
 		ctx := context.Background()
 		for _, screenshot := range imageCapture {
 			uploadinfo, err := s.minio.Upload(ctx, screenshot)

@@ -24,22 +24,28 @@ func CMD(run bool, name string, arg ...string) {
 	}
 }
 
-func CheckApproveLists(list string) bool {
+func CheckApproveLists(list []string) bool {
 	approveLists := []string{
 		"Procmon.exe",
-		"C:\\\\Program Files\\\\Windows Media Player\\\\wmpnetwk.exe",
-		"C:\\\\Program Files\\\\Windows Media Player\\\\wmpnscfg.exe",
-		"C:\\\\Windows\\\\Explorer.EXE",
-		"C:\\\\Windows\\\\system32\\\\lsm.exe",
-		"C:\\\\procmon.exe",
-		"C:\\\\Windows\\\\system32\\\\vssvc.exe",
-		"C:\\\\Windows\\\\system32\\\\mobsync.exe",
-		"C:\\\\Windows\\\\system32\\\\DllHost.exe",
-		"C:\\\\Users\\\\kuno\\\\Desktop\\\\friday_agent.exe",
+		"wuauclt.exe",
+		"wmiprvse.exe",
+		"friday_agent.exe",
+		"C:\\Program Files\\Windows Media Player\\wmpnetwk.exe",
+		"C:\\Program Files\\Windows Media Player\\wmpnscfg.exe",
+		"C:\\Windows\\Explorer.EXE",
+		"C:\\Windows\\system32\\lsm.exe",
+		"C:\\procmon.exe",
+		"C:\\Windows\\system32\\vssvc.exe",
+		"C:\\Windows\\system32\\mobsync.exe",
+		"C:\\Users\\kuno\\Desktop\\friday_agent.exe",
+		"procmon.exe",
 	}
-	for _, ls := range approveLists {
-		replacePath := strings.Replace(list, "\\", "\\\\", -1)
-		return strings.Contains(replacePath, ls)
+	for _, lst := range list{
+		for _, ap := range approveLists {
+			if ap == lst {
+				return strings.Contains(lst, ap)
+			}
+		}
 	}
 	return false
 }

@@ -79,7 +79,8 @@ func (s *Server) checkProcmon() {
 
 func (s *Server) processCapture() {
 	logrus.Infof("악성코드 분석 중")
-	v := []string{"cmd.exe", "/C", "start", procmon, "/BackingFile", pml, "/Quiet", "/Minimized","/LoadConfig", pmc}
+	//v := []string{"cmd.exe", "/C", "start", procmon, "/BackingFile", pml, "/Quiet", "/Minimized","/LoadConfig", pmc}
+	v := []string{"cmd.exe", "/C", "start", procmon, "/BackingFile", pml, "/Quiet", "/Minimized"}
 	cmd := exec.Command(v[0], v[:]...)
 	if err := cmd.Run(); err != nil {
 		logrus.Errorf("%s 을 찾을 수 없습니다.", procmon)
@@ -88,7 +89,8 @@ func (s *Server) processCapture() {
 
 func (s *Server) pmltoCSV() {
 	defer logrus.Infof("데이터 분석 완료")
-	v := []string{"cmd.exe", "/C", "start", procmon, "/OpenLog", pml, "/SaveApplyFilter", "/saveas", csvData, "/LoadConfig", pmc}
+	//v := []string{"cmd.exe", "/C", "start", procmon, "/OpenLog", pml, "/SaveApplyFilter", "/saveas", csvData, "/LoadConfig", pmc}
+	v := []string{"cmd.exe", "/C", "start", procmon, "/OpenLog", pml, "/SaveApplyFilter", "/saveas", csvData}
 	cmd := exec.Command(v[0], v[:]...)
 	if err := cmd.Run(); err != nil {
 		logrus.Errorf("%s 을 찾을 수 없습니다.", procmon)
@@ -138,11 +140,15 @@ func (s *Server) ConvertCsvToJson(data *models.DBModel) {
 	var processCreate models.ProcessCreate
 	var createFile models.CreateFile
 	var deleteFile models.DeleteFile
+	var readFile models.ReadFile
 
 	var setRegValue models.SetRegValue
 	var deleteRegValue models.DeleteRegValue
 	var deleteRegKey models.DeleteRegKey
 	var renameFile models.RenameFile
+	var createRegKey models.RegCreateKey
+	var openregKey models.OpenRegKey
+	var getregKey models.GetRegKey
 
 	var udpStuct models.UDP
 	var tcpStuct models.TCP
@@ -163,7 +169,7 @@ func (s *Server) ConvertCsvToJson(data *models.DBModel) {
 	for i, rec := range records {
 		if i > 0 {
 			//replaceImagePath := strings.Replace(rec[8], "\\", "\\\\", -1)
-			notApprove := utils.CheckApproveLists(rec[8])
+			notApprove := utils.CheckApproveLists(rec)
 			if !notApprove {
 				switch rec[3] {
 				case "Process Create":
@@ -190,6 +196,13 @@ func (s *Server) ConvertCsvToJson(data *models.DBModel) {
 						data.CreateFile = append(data.CreateFile, createFile)
 					}
 
+				case "ReadFile":
+					readFile.PID = rec[2]
+					readFile.ProcessName = rec[1]
+					readFile.ProcessPath = rec[4]
+
+					data.ReadFile = append(data.ReadFile, readFile)
+
 				case "SetDispositionInformationFile":
 					if rec[5] == "SUCCESS" {
 						c_path := rec[4]
@@ -212,6 +225,32 @@ func (s *Server) ConvertCsvToJson(data *models.DBModel) {
 
 					data.RenameFile = append(data.RenameFile, renameFile)
 
+				case "RegCreateKey":
+					if rec[5] == "SUCCESS" {
+						createRegKey.PID = rec[2]
+						createRegKey.ProcessName = rec[1]
+						createRegKey.Key = rec[4]
+
+						data.RegCreateKey = append(data.RegCreateKey, createRegKey)
+					}
+
+				case "RegOpenKey":
+					if rec[5] == "SUCCESS" {
+						openregKey.PID = rec[2]
+						openregKey.ProcessName = rec[1]
+						openregKey.Key = rec[4]
+
+						data.OpenRegKey = append(data.OpenRegKey, openregKey)
+					}
+
+				case "RegQueryValue":
+					if rec[5] == "SUCCESS" {
+						getregKey.PID = rec[2]
+						getregKey.ProcessName = rec[1]
+						getregKey.Key = rec[4]
+
+						data.GetRegKey = append(data.GetRegKey, getregKey)
+					}
 				case "RegSetValue":
 					if rec[5] == "SUCCESS" {
 						setRegValue.PID = rec[2]
